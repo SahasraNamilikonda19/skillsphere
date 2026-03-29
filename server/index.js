@@ -3,54 +3,39 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 require('dotenv').config();
-
 const connectDB = require('./config/db');
 const errorHandler = require('./middleware/errorHandler');
-
-const authRoutes    = require('./routes/auth');
-const userRoutes    = require('./routes/users');
-const sessionRoutes = require('./routes/sessions');
-const quizRoutes    = require('./routes/quiz');
-
-const app    = express();
+const User = require('./models/User');
+const aiRoutes = require('./routes/ai');
+const app = express();
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: process.env.CLIENT_URL,
-    methods: ['GET', 'POST']
+    origin: '*', // or your frontend URL
   }
 });
-
-// Middleware
+// 1. MIDDLEWARE
 app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// Routes
-app.use('/api/auth',     authRoutes);
-app.use('/api/users',    userRoutes);
-app.use('/api/sessions', sessionRoutes);
-app.use('/api/quiz',     quizRoutes);
-
-// Health check
-app.get('/', (req, res) => {
-  res.json({ message: 'SkillSphere API is running' });
-});
-
-// Global error handler — must be last
-app.use(errorHandler);
-
-// Socket.io events
+app.use('/api/ai', aiRoutes);
+// 2. SOCKET.IO
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
 
+  // Join a session room
   socket.on('join-session', (sessionId) => {
     socket.join(sessionId);
+    console.log(`Socket ${socket.id} joined room: ${sessionId}`);
   });
 
+  // Send message to everyone in the session room
   socket.on('send-message', ({ sessionId, message }) => {
-    io.to(sessionId).emit('receive-message', message);
+    console.log(`Message in room ${sessionId}:`, message.content);
+    // Broadcast to ALL users in the room INCLUDING sender
+    // sender already adds their own message locally so we use to() not broadcast
+    socket.to(sessionId).emit('receive-message', message);
   });
 
   socket.on('session-response', ({ userId, data }) => {
@@ -62,10 +47,36 @@ io.on('connection', (socket) => {
   });
 });
 
-// Start server
+
+
+
+// 3. EMERGENCY TEST ROUTE (Put this BEFORE other routes)
+app.get('/manual-test', async (req, res) => {
+  try {
+    const testUser = await User.create({
+      name: "Manual Test",
+      email: `test${Date.now()}@gmail.com`,
+      password: "password123"
+    });
+    res.send(`<h1>Success!</h1><p>Check Atlas for ID: ${testUser._id}</p>`);
+  } catch (err) {
+    res.status(500).send(`<h1>Failed</h1><p>${err.message}</p>`);
+  }
+});
+
+// 4. MAIN ROUTES
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/sessions', require('./routes/sessions'));
+app.use('/api/quiz', require('./routes/quiz'));
+
+// 5. ERROR HANDLER (MUST BE LAST)
+app.use(errorHandler);
+
+// 6. START SERVER
 connectDB().then(() => {
-  server.listen(process.env.PORT || 5000, () => {
-    console.log(`Server running on port ${process.env.PORT || 5000}`);
+  server.listen(5000, () => {
+    console.log('✅ Server running on http://localhost:5000');
   });
 });
 

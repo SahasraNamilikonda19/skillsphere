@@ -22,28 +22,28 @@ const availabilitySchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema(
   {
     name: {
-      type:     String,
-      required: [true, 'Name is required'],
-      trim:     true,
+      type:      String,
+      required:  [true, 'Name is required'],
+      trim:      true,
       minlength: [2, 'Name must be at least 2 characters']
     },
     email: {
-      type:     String,
-      required: [true, 'Email is required'],
-      unique:   true,
+      type:      String,
+      required:  [true, 'Email is required'],
+      unique:    true,
       lowercase: true,
-      trim:     true,
-      match:    [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
+      trim:      true,
+      match:     [/^\S+@\S+\.\S+$/, 'Please enter a valid email']
     },
     password: {
       type:      String,
       required:  [true, 'Password is required'],
       minlength: [6, 'Password must be at least 6 characters'],
-      select:    false // never returned in queries by default
+      select:    false
     },
     bio: {
-      type:    String,
-      default: '',
+      type:      String,
+      default:   '',
       maxlength: [300, 'Bio cannot exceed 300 characters']
     },
     avatarUrl: {
@@ -57,7 +57,7 @@ const userSchema = new mongoose.Schema(
       type:    Number,
       default: 0
     },
-    badges:  [badgeSchema],
+    badges:       [badgeSchema],
     rating: {
       type:    Number,
       default: 0,
@@ -71,24 +71,42 @@ const userSchema = new mongoose.Schema(
     isActive: {
       type:    Boolean,
       default: true
+    },
+    resetPasswordToken: {
+      type:    String,
+      default: undefined
+    },
+    resetPasswordExpire: {
+      type:    Date,
+      default: undefined
     }
   },
   {
-    timestamps: true // adds createdAt and updatedAt automatically
+    timestamps: true
   }
 );
 
-// Hash password before saving
-userSchema.pre('save', async function (next) {
-  // Only hash if password was changed
-  if (!this.isModified('password')) return next();
-  const salt   = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
-  next();
-});
+// ✅ IMPORTANT: must be regular function, NOT arrow function
+// Replace your existing userSchema.pre('save'...) with this:
+// Replace your commented out block with this:
+// REPLACE your current pre-save block with this:
+userSchema.pre('save', async function() {
+  // If password isn't modified, just exit the function
+  if (!this.isModified('password')) {
+    return; 
+  }
 
-// Method to check password on login
-userSchema.methods.matchPassword = async function (enteredPassword) {
+  try {
+    console.log("Attempting to hash password...");
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    console.log("✅ Password hashed successfully!");
+  } catch (error) {
+    console.error("❌ Hashing Error:", error.message);
+    throw error; // This tells Mongoose an error occurred
+  }
+});
+userSchema.methods.matchPassword = async function(enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 

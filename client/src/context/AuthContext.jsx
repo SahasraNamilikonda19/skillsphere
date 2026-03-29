@@ -23,6 +23,7 @@ export function AuthProvider({ children }) {
 
   const login = (token, userData) => {
     localStorage.setItem('skillsphere_token', token);
+    localStorage.setItem('skillsphere_user', JSON.stringify(userData));
     setUser(userData);
   };
 

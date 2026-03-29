@@ -1,24 +1,15 @@
-const express = require('express');
-const router  = express.Router();
-const {
-  getUserProfile,
-  updateProfile,
-  addSkillToTeach,
-  addSkillToLearn,
-  removeSkillToTeach,
-  searchUsers,
-  endorseUser,
-  getLeaderboard
-} = require('../controllers/userController');
-const { protect } = require('../middleware/auth');
+const express        = require('express');
+const router         = express.Router();
+const { protect }    = require('../middleware/auth');
+const userController = require('../controllers/userController');
 
-router.get('/search',                protect, searchUsers);
-router.get('/leaderboard',           protect, getLeaderboard);
-router.get('/:id',                   protect, getUserProfile);
-router.put('/:id',                   protect, updateProfile);
-router.post('/:id/skills/teach',     protect, addSkillToTeach);
-router.post('/:id/skills/learn',     protect, addSkillToLearn);
-router.delete('/skills/teach/:skillId', protect, removeSkillToTeach);
-router.post('/:id/endorse',          protect, endorseUser);
+router.get('/search',                protect, userController.searchUsers);
+router.get('/leaderboard',           protect, userController.getLeaderboard);
+router.get('/:id',                   protect, userController.getUserProfile);
+router.put('/:id',                   protect, userController.updateProfile);
+router.post('/:id/skills/teach',     protect, userController.addSkillToTeach);
+router.post('/:id/skills/learn',     protect, userController.addSkillToLearn);
+router.delete('/skills/teach/:skillId', protect, userController.removeSkillToTeach);
+router.post('/:id/endorse',          protect, userController.endorseUser);
 
 module.exports = router;

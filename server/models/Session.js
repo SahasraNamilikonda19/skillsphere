@@ -26,7 +26,7 @@ const sessionSchema = new mongoose.Schema(
       type: Date
     },
     duration: {
-      type:    Number, // in minutes
+      type:    Number,
       default: 60
     },
     meetingLink: {
@@ -34,17 +34,21 @@ const sessionSchema = new mongoose.Schema(
       default: ''
     },
     message: {
-      type:    String, // learner's initial message when requesting
+      type:    String,
       default: ''
     },
     feedback: {
-      type:    String, // learner's feedback after session
+      type:    String,
       default: ''
     },
     rating: {
       type: Number,
       min:  1,
       max:  5
+    },
+    quizAssigned: {
+      type:    Boolean,
+      default: false
     },
     quizCompleted: {
       type:    Boolean,
@@ -55,9 +59,7 @@ const sessionSchema = new mongoose.Schema(
       default: false
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
 module.exports = mongoose.model('Session', sessionSchema);
