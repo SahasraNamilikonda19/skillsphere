@@ -1,40 +1,69 @@
-const express = require('express');
-const http = require('http');
-const { Server } = require('socket.io');
-const cors = require('cors');
+const express      = require('express');
+const http         = require('http');
+const { Server }   = require('socket.io');
+const cors         = require('cors');
 require('dotenv').config();
-const connectDB = require('./config/db');
-const errorHandler = require('./middleware/errorHandler');
-const User = require('./models/User');
-const aiRoutes = require('./routes/ai');
-const app = express();
+
+const connectDB      = require('./config/db');
+const errorHandler   = require('./middleware/errorHandler');
+
+const app    = express();
 const server = http.createServer(app);
 
+// ── Allowed Origins ───────────────────────────────────────
+const allowedOrigins = [
+  'http://localhost:5173',
+  process.env.CLIENT_URL
+].filter(Boolean);
+
+// ── Socket.io ─────────────────────────────────────────────
 const io = new Server(server, {
   cors: {
-    origin: '*', // or your frontend URL
+    origin:      allowedOrigins,
+    methods:     ['GET', 'POST'],
+    credentials: true
   }
 });
-// 1. MIDDLEWARE
-app.use(cors({ origin: process.env.CLIENT_URL, credentials: true }));
+
+// ── Middleware ────────────────────────────────────────────
+app.use(cors({
+  origin: function(origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api/ai', aiRoutes);
-// 2. SOCKET.IO
+
+// ── Routes ────────────────────────────────────────────────
+app.use('/api/auth',     require('./routes/auth'));
+app.use('/api/users',    require('./routes/users'));
+app.use('/api/sessions', require('./routes/sessions'));
+app.use('/api/quiz',     require('./routes/quiz'));
+app.use('/api/ai',       require('./routes/ai'));
+
+// ── Health Check ──────────────────────────────────────────
+app.get('/', (req, res) => {
+  res.json({ message: 'SkillSphere API is running ✅' });
+});
+
+// ── Error Handler (must be last) ──────────────────────────
+app.use(errorHandler);
+
+// ── Socket.io Events ──────────────────────────────────────
 io.on('connection', (socket) => {
   console.log(`Socket connected: ${socket.id}`);
 
-  // Join a session room
   socket.on('join-session', (sessionId) => {
     socket.join(sessionId);
     console.log(`Socket ${socket.id} joined room: ${sessionId}`);
   });
 
-  // Send message to everyone in the session room
   socket.on('send-message', ({ sessionId, message }) => {
-    console.log(`Message in room ${sessionId}:`, message.content);
-    // Broadcast to ALL users in the room INCLUDING sender
-    // sender already adds their own message locally so we use to() not broadcast
     socket.to(sessionId).emit('receive-message', message);
   });
 
@@ -47,36 +76,10 @@ io.on('connection', (socket) => {
   });
 });
 
-
-
-
-// 3. EMERGENCY TEST ROUTE (Put this BEFORE other routes)
-app.get('/manual-test', async (req, res) => {
-  try {
-    const testUser = await User.create({
-      name: "Manual Test",
-      email: `test${Date.now()}@gmail.com`,
-      password: "password123"
-    });
-    res.send(`<h1>Success!</h1><p>Check Atlas for ID: ${testUser._id}</p>`);
-  } catch (err) {
-    res.status(500).send(`<h1>Failed</h1><p>${err.message}</p>`);
-  }
-});
-
-// 4. MAIN ROUTES
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/sessions', require('./routes/sessions'));
-app.use('/api/quiz', require('./routes/quiz'));
-
-// 5. ERROR HANDLER (MUST BE LAST)
-app.use(errorHandler);
-
-// 6. START SERVER
+// ── Start Server ──────────────────────────────────────────
 connectDB().then(() => {
-  server.listen(5000, () => {
-    console.log('✅ Server running on http://localhost:5000');
+  server.listen(process.env.PORT || 5000, () => {
+    console.log(`✅ Server running on http://localhost:${process.env.PORT || 5000}`);
   });
 });
 

@@ -2,12 +2,11 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    // Force Mongoose to use the URI from .env
     const conn = await mongoose.connect(process.env.MONGODB_URI);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-    console.log(`📂 Database Name: ${conn.connection.name}`); // This should say 'skillsphere'
+    console.log(`📂 Database Name: ${conn.connection.name}`);
   } catch (error) {
-    console.error(`❌ Error: ${error.message}`);
+    console.error(`❌ MongoDB connection error: ${error.message}`);
     process.exit(1);
   }
 };
