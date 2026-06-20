@@ -13,8 +13,8 @@ const server = http.createServer(app);
 // ── Allowed Origins ───────────────────────────────────────
 const allowedOrigins = [
   'http://localhost:5173',
-  process.env.CLIENT_URL
-].filter(Boolean);
+  'https://skillsphere-l9yrjtkh4-saasra.vercel.app'
+];
 
 // ── Socket.io ─────────────────────────────────────────────
 const io = new Server(server, {
